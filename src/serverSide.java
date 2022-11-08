@@ -1,41 +1,110 @@
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
 
-public class serverSide {
-
-
-    public static void main(String[ ] args) throws IOException {
-
-        ServerSocket serverSocket = new ServerSocket(12345);
-        Socket connection = serverSocket.accept();
-
-        PrintStream toClient = new PrintStream(connection.getOutputStream());
-        BufferedReader buffReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        BufferedReader keyInput = new BufferedReader(new InputStreamReader(System.in));
+public class serverSide extends JFrame{
 
 
-        while(true) {
-             String clientMessage, serverMessage;
+    private JTextField textBox;
+    private JButton sendButton;
+    private JButton sendFileButton;
+    private JTextArea chatArea;
+    private JPanel mainPanel;
+    private  static Socket socket;
+    private static InputStreamReader inStream;
+    private  static BufferedWriter buffWriter;
+    private static  BufferedReader buffReader;
+    private static ServerSocket serverSocket;
+    public serverSide(String title){
+        super(title);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setContentPane(mainPanel);
+        this.pack();
+        sendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String message = textBox.getText();
+                if(!message.isEmpty()){
+                    chatArea.setText(chatArea.getText().trim()+ "\n Server:\t" + message );
+                    sendMessage(message);
 
-             while((clientMessage = buffReader.readLine()) != null){
-                 System.out.println("Client says: "+  clientMessage);
-                 serverMessage = keyInput.readLine();
-                 toClient.println(serverMessage);
+                }
+                else {
+                    System.out.println("Could not retrive");
+                }
+            }
+        });
+    }
 
-             }
-             toClient.close();
-             buffReader.close();
-             keyInput.close();
-             serverSocket.close();
-             connection.close();
-             System.exit(0);
+    public static void closeConnection(Socket socket,ServerSocket serverSocket,  BufferedReader buffReader, BufferedWriter buffWriter){
+        try{
+            if(socket!= null){
+                socket.close();
+            }
+            if(buffReader != null) {
+                buffReader.close();
+            }
+            if(buffWriter!= null){
+                buffWriter.close();
+            }
+
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+
+    public void sendMessage(String message){
+        try{
+            buffWriter.write(message);
+            buffWriter.newLine();
+            buffWriter.flush();
+
+        }catch(IOException e) {
+            e.printStackTrace();
+            System.out.println("Could Not Send Message.");
+        }
+    }
+    public static void main(String[ ] args) {
+
+        serverSide mainFrame =  new serverSide("Client Side App");
+        mainFrame.setVisible(true);
+
+        try {
+            try {
+                serverSocket = new ServerSocket(12345);
+                socket = serverSocket.accept();
+                buffReader = new BufferedReader( new InputStreamReader(socket.getInputStream()));
+                buffWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+
+            } catch(IOException e){
+                e.printStackTrace();
+                closeConnection(socket,serverSocket, buffReader, buffWriter);
+            }
 
 
 
+            while(true) {
+                String fromClient;
+
+                while((fromClient = buffReader.readLine()) != null){
+                    fromClient = buffReader.readLine();
+                    mainFrame.chatArea.setText(mainFrame.chatArea.getText().trim()+ "\n Client:\t" + fromClient);
 
 
+                }
+
+
+
+            }
+
+
+        }catch(IOException e ){
+            e.printStackTrace();
+            closeConnection(socket, serverSocket,  buffReader,buffWriter);
         }
 
     }
